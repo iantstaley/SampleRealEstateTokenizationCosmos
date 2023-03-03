@@ -1,0 +1,74 @@
+echo "# SampleRealEstateTokenizationCosmos" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/iantstaley/SampleRealEstateTokenizationCosmos.git
+git push -u origin main
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TokenizeRealEstateMsg {
+    pub name: String,
+    pub description: String,
+    pub owner: String,
+    pub price: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct RealEstateToken {
+    pub name: String,
+    pub description: String,
+    pub owner: String,
+    pub price: u64,
+}
+
+impl RealEstateToken {
+    pub fn new(name: String, description: String, owner: String, price: u64) -> Self {
+        RealEstateToken {
+            name,
+            description,
+            owner,
+            price,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct TokenizeRealEstateResponse {
+    pub real_estate_token: RealEstateToken,
+}
+
+pub fn tokenize_real_estate(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msg: TokenizeRealEstateMsg,
+) -> StdResult<Response> {
+    let real_estate_token = RealEstateToken::new(
+        msg.name,
+        msg.description,
+        msg.owner,
+        msg.price,
+    );
+
+    let key = info.sender.as_bytes();
+    let mut store = deps.storage;
+    if let Some(_) = store.get(&key) {
+        return Err(StdError::generic_err("This real estate has already been tokenized"));
+    }
+
+    store.set(&key, &to_binary(&real_estate_token)?);
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "tokenize_real_estate"),
+        ("owner", &msg.owner),
+        ("name", &msg.name),
+        ("description", &msg.description),
+        ("price", &msg.price.to_string()),
+    ]))
+}
